@@ -1,16 +1,22 @@
 #include "orderButton.h"
 
-struct OrderButton queue[10];
+struct Queue
+{
+    int activeOrder;
+    struct OrderButton *buttons;
+};
+
+struct Queue orderQueue = {-1, buttons};
 
 void completeOrder(int floorId)
 {
-    size_t num_buttons = sizeof(queue) / sizeof(queue[0]);
+    size_t num_buttons = sizeof(orderQueue.buttons) / sizeof(orderQueue.buttons[0]);
 
     for (int i = 0; i < num_buttons; i++)
     {
-        if (queue[i].floorId == floorId)
+        if (orderQueue.buttons[i].floorId == floorId)
         {
-            queue[i].isActive = false;
+            orderQueue.buttons[i].isActive = false;
         }
     }
 }
