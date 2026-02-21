@@ -30,13 +30,14 @@ int main(void)
     }
 
     int lastKnownFloor = 0;
-    bool stopLatched = false;
     changeState(DOOR_CLOSED);
     floor_startPollingThread();
     orderButtons_startPollingThread();
 
     while (1)
     {
+        nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+
         int stopPressed = elevio_stopButton();
         elevio_stopLamp(stopPressed);
 
@@ -57,37 +58,35 @@ int main(void)
         // FAT S4/S5/S6/D3: immediate stop, clear orders, ignore new orders, open door at floor.
         if (stopPressed)
         {
-            changeState(STOP);
             elevio_motorDirection(DIRN_STOP);
+            queue_clearAllOrders();
 
-            if (!stopLatched)
+            if (sensorFloor >= 0)
             {
-                queue_clearAllOrders();
+                if (state_p->state == MOVING)
+                {
+                    changeState(DOOR_CLOSED);
+                }
                 door_open();
-                stopLatched = true;
             }
-
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            else
+            {
+                changeState(STOP);
+            }
             continue;
         }
-        stopLatched = false;
 
+        // Reset to idle (DOOR_CLOSED) when stopPressed is false
         if (state_p->state == STOP)
         {
             elevio_motorDirection(DIRN_STOP);
-            if (sensorFloor < 0)
-            {
-                changeState(DOOR_CLOSED);
-            }
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            changeState(DOOR_CLOSED);
             continue;
         }
 
         if (state_p->state == DOOR_OPEN)
         {
             elevio_motorDirection(DIRN_STOP);
-            queue_updateCurrentOrder();
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
@@ -97,19 +96,18 @@ int main(void)
         {
             elevio_motorDirection(DIRN_STOP);
             changeState(DOOR_CLOSED);
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
         MotorDirection dir = queue_getDirectionToCurrentOrder(lastKnownFloor);
 
+        // Stop moving if outside area
         if ((lastKnownFloor == 0 && dir == DIRN_DOWN) ||
             (lastKnownFloor == N_FLOORS - 1 && dir == DIRN_UP))
         {
             elevio_motorDirection(DIRN_STOP);
             orderQueue.currentOrder = -1;
             changeState(DOOR_CLOSED);
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
@@ -118,8 +116,8 @@ int main(void)
         {
             elevio_motorDirection(DIRN_STOP);
             queue_completeOrder(sensorFloor);
+            changeState(DOOR_CLOSED);
             door_open();
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
@@ -127,7 +125,6 @@ int main(void)
         {
             elevio_motorDirection(DIRN_STOP);
             changeState(DOOR_CLOSED);
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
@@ -140,7 +137,5 @@ int main(void)
             elevio_motorDirection(DIRN_STOP);
             changeState(DOOR_CLOSED);
         }
-
-        nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
     }
 }

@@ -26,6 +26,10 @@ bool changeState(elev_state new_state)
         return true;
 
     case DOOR_OPEN:
+        if (prev_state != DOOR_CLOSED)
+        {
+            return false;
+        }
         if (elevio_floorSensor() < 0)
         {
             return false;

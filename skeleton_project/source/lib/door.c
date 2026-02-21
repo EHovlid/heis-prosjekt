@@ -17,15 +17,13 @@ static long long now_ms(void)
 
 bool door_open(void)
 {
-    if (state_p->state != DOOR_OPEN)
+    // Guard for door open. Do not open if between floors.
+    if (!changeState(DOOR_OPEN))
     {
-        if (!changeState(DOOR_OPEN))
-        {
-            return false;
-        }
-        elevio_doorOpenLamp(1);
+        return false;
     }
 
+    elevio_doorOpenLamp(1);
     doorTimerActive = true;
     closeAtMs = now_ms() + 3000;
     return true;
@@ -45,6 +43,7 @@ void door_update(void)
         return;
     }
 
+    // Keep open if obstruction or stopping at floor
     if (elevio_stopButton() || elevio_obstruction())
     {
         closeAtMs = now_ms() + 3000;
