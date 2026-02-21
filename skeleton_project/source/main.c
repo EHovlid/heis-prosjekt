@@ -14,11 +14,29 @@ int main(void)
 
     printf("=== Elevator Controller ===\n");
 
+    
+    int sensorFloor = floor_getSensor();
+    if (sensorFloor != 0)
+    {
+        
+        printf("=== Moving to first floor ===\n");
+        while (floor_getSensor() != 0)
+        {
+            elevio_motorDirection(DIRN_DOWN);
+        }
+        elevio_motorDirection(DIRN_STOP);     
+        printf("=== Ready for orders ===\n");
+    }
+
     int lastKnownFloor = 0;
     int buttonPollTick = 0;
+    changeState(DOOR_CLOSED);
 
     while (1)
     {
+        
+        printf("state=%d\n", state_p->state);
+
         elevio_stopLamp(state_p->state == STOP ? 1 : 0);
 
         int sensorFloor = floor_getSensor();
@@ -40,6 +58,8 @@ int main(void)
             {
                 door_open();
             }
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            continue;
         }
 
         if (state_p->state == STOP)
