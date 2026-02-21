@@ -15,6 +15,7 @@ int main(void)
     printf("Press the stop button on the elevator panel to exit\n");
 
     int lastKnownFloor = 0;
+    int buttonPollTick = 0;
 
     while (1)
     {
@@ -45,8 +46,18 @@ int main(void)
             }
         }
 
-        orderButtons_poll();
-        queue_updateActiveOrder();
+        // Only poll buttons every fourth loop
+        // Polling buttons takes a long time and can prevent update floorSensor
+        if (buttonPollTick == 0)
+        {
+            orderButtons_poll();
+            queue_updateActiveOrder();
+            buttonPollTick = 4;
+        }
+        else
+        {
+            buttonPollTick--;
+        }
 
         // Idle if no active order
         if (!queue_hasActiveOrder())
