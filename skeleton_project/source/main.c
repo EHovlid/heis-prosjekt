@@ -30,13 +30,15 @@ int main(void)
     }
 
     int lastKnownFloor = 0;
-    int buttonPollTick = 0;
+    bool stopLatched = false;
     changeState(DOOR_CLOSED);
+    floor_startPollingThread();
+    orderButtons_startPollingThread();
 
     while (1)
     {
         int stopPressed = elevio_stopButton();
-        elevio_stopLamp(state_p->state == STOP ? 1 : 0);
+        elevio_stopLamp(stopPressed);
 
         int sensorFloor = floor_getSensor();
 
@@ -45,46 +47,51 @@ int main(void)
             lastKnownFloor = sensorFloor;
             floor_setIndicator(sensorFloor);
         }
+        else
+        {
+            lastKnownFloor = floor_getLastKnown();
+        }
+
+        door_update();
 
         // FAT S4/S5/S6/D3: immediate stop, clear orders, ignore new orders, open door at floor.
         if (stopPressed)
         {
-            changeState(STOP); // Stop status alwaus succeeds
-            elevio_stopLamp(1);
-            queue_clearAllOrders();   
+            changeState(STOP);
             elevio_motorDirection(DIRN_STOP);
-            if (sensorFloor >= 0)
+
+            if (!stopLatched)
             {
+                queue_clearAllOrders();
                 door_open();
+                stopLatched = true;
             }
+
             nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
+        stopLatched = false;
 
         if (state_p->state == STOP)
         {
-            // Clear stop
-            if (!stopPressed)
+            elevio_motorDirection(DIRN_STOP);
+            if (sensorFloor < 0)
             {
                 changeState(DOOR_CLOSED);
-                elevio_stopLamp(0);
             }
-
             nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
-        // Poll order buttons less frequently to avoid blocking floor updates.
-        if (buttonPollTick == 0)
+        if (state_p->state == DOOR_OPEN)
         {
-            orderButtons_poll();
+            elevio_motorDirection(DIRN_STOP);
             queue_updateCurrentOrder();
-            buttonPollTick = 4;
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            continue;
         }
-        else
-        {
-            buttonPollTick--;
-        }
+
+        queue_updateCurrentOrder();
 
         if (!queue_hasCurrentOrder())
         {
@@ -96,8 +103,17 @@ int main(void)
 
         MotorDirection dir = queue_getDirectionToCurrentOrder(lastKnownFloor);
 
+        if ((lastKnownFloor == 0 && dir == DIRN_DOWN) ||
+            (lastKnownFloor == N_FLOORS - 1 && dir == DIRN_UP))
+        {
+            elevio_motorDirection(DIRN_STOP);
+            orderQueue.currentOrder = -1;
+            changeState(DOOR_CLOSED);
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            continue;
+        }
+
         if (sensorFloor >= 0 &&
-            dir != DIRN_STOP &&
             queue_hasOrderAtFloorInDirection(sensorFloor, dir))
         {
             elevio_motorDirection(DIRN_STOP);
@@ -107,12 +123,10 @@ int main(void)
             continue;
         }
 
-        int targetFloor = orderQueue.currentOrder;
-        if (sensorFloor == targetFloor)
+        if (dir == DIRN_STOP)
         {
             elevio_motorDirection(DIRN_STOP);
-            queue_completeOrder(targetFloor);
-            door_open();
+            changeState(DOOR_CLOSED);
             nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }

@@ -9,6 +9,7 @@ bool queue_hasCurrentOrder(void)
 
 bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
 {
+    orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
         struct OrderButton button = orderQueue.buttons[i];
@@ -19,23 +20,28 @@ bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
 
         if (button.type == BUTTON_CAB)
         {
+            orderButtons_unlock();
             return true;
         }
 
         if (dir == DIRN_UP && button.type == BUTTON_HALL_UP)
         {
+            orderButtons_unlock();
             return true;
         }
         if (dir == DIRN_DOWN && button.type == BUTTON_HALL_DOWN)
         {
+            orderButtons_unlock();
             return true;
         }
         if (dir == DIRN_STOP)
         {
+            orderButtons_unlock();
             return true;
         }
     }
 
+    orderButtons_unlock();
     return false;
 }
 
@@ -66,24 +72,39 @@ void queue_updateCurrentOrder(void)
     }
 
     // Set first active orderButton to current order
+    orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
         if (orderQueue.buttons[i].isActive)
         {
             orderQueue.currentOrder = orderQueue.buttons[i].floorId;
+            orderButtons_unlock();
             return;
         }
     }
+    orderButtons_unlock();
 }
 
 void queue_completeOrder(int floorId)
 {
+    bool clearMask[10] = {false};
+
+    orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
         // All buttons on stopped floor should be cleared
         if (orderQueue.buttons[i].floorId == floorId)
         {
             orderQueue.buttons[i].isActive = false;
+            clearMask[i] = true;
+        }
+    }
+    orderButtons_unlock();
+
+    for (int i = 0; i < orderQueue.numButtons; i++)
+    {
+        if (clearMask[i])
+        {
             orderButtons_setLight(orderQueue.buttons[i].floorId, orderQueue.buttons[i].type, false);
         }
     }
@@ -96,9 +117,15 @@ void queue_completeOrder(int floorId)
 
 void queue_clearAllOrders(void)
 {
+    orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
         orderQueue.buttons[i].isActive = false;
+    }
+    orderButtons_unlock();
+
+    for (int i = 0; i < orderQueue.numButtons; i++)
+    {
         orderButtons_setLight(orderQueue.buttons[i].floorId, orderQueue.buttons[i].type, false);
     }
 
