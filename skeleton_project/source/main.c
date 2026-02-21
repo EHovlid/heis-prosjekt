@@ -2,6 +2,7 @@
 #include <time.h>
 
 #include "driver/elevio.h"
+#include "lib/door.h"
 #include "lib/floor.h"
 #include "lib/orderButton.h"
 #include "lib/queue.h"
@@ -11,14 +12,15 @@ int main(void)
 {
     elevio_init();
 
-    printf("=== Example Program ===\n");
-    printf("Press the stop button on the elevator panel to exit\n");
+    printf("=== Elevator Controller ===\n");
 
     int lastKnownFloor = 0;
     int buttonPollTick = 0;
 
     while (1)
     {
+        elevio_stopLamp(state_p->state == STOP ? 1 : 0);
+
         int sensorFloor = floor_getSensor();
         if (sensorFloor >= 0)
         {
@@ -26,32 +28,38 @@ int main(void)
             floor_setIndicator(sensorFloor);
         }
 
-        // Emergency stop
-        if (elevio_stopButton())
+        // FAT S4/S5/S6/D3: immediate stop, clear orders, ignore new orders, open door at floor.
+        int stopPressed = elevio_stopButton();
+        if (stopPressed)
         {
+            changeState(STOP); // Stop status alwaus succeeds
+            elevio_stopLamp(1);
+            queue_clearAllOrders();   
             elevio_motorDirection(DIRN_STOP);
-            changeState(STOP);
+            if (sensorFloor >= 0)
+            {
+                door_open();
+            }
+        }
+
+        if (state_p->state == STOP)
+        {
+            // Clear stop
+            if (!elevio_stopButton())
+            {
+                changeState(DOOR_CLOSED);
+                elevio_stopLamp(0);
+            }
+
             nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
-        // Tries to exit emergency stop and go back to idle (DOOR_CLOSED)
-        if (state_p->state == STOP)
-        {
-            if (!changeState(DOOR_CLOSED))
-            {
-                elevio_motorDirection(DIRN_STOP);
-                nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
-                continue;
-            }
-        }
-
-        // Only poll buttons every fourth loop
-        // Polling buttons takes a long time and can prevent update floorSensor
+        // Poll order buttons less frequently to avoid blocking floor updates.
         if (buttonPollTick == 0)
         {
             orderButtons_poll();
-            queue_updateActiveOrder();
+            queue_updateCurrentOrder();
             buttonPollTick = 4;
         }
         else
@@ -59,8 +67,7 @@ int main(void)
             buttonPollTick--;
         }
 
-        // Idle if no active order
-        if (!queue_hasActiveOrder())
+        if (!queue_hasCurrentOrder())
         {
             elevio_motorDirection(DIRN_STOP);
             changeState(DOOR_CLOSED);
@@ -68,39 +75,17 @@ int main(void)
             continue;
         }
 
-        int targetFloor = orderQueue.activeOrder;
-
-        // Open door if on correct floor
+        int targetFloor = orderQueue.currentOrder;
         if (sensorFloor == targetFloor)
         {
             elevio_motorDirection(DIRN_STOP);
-
-            if (changeState(DOOR_OPEN))
-            {
-                elevio_doorOpenLamp(1);
-                queue_completeOrder(targetFloor);
-                nanosleep(&(struct timespec){3, 0}, NULL);
-                elevio_doorOpenLamp(0);
-                changeState(DOOR_CLOSED);
-            }
-
+            queue_completeOrder(targetFloor);
+            door_open();
             nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
             continue;
         }
 
-        MotorDirection dir = queue_getDirectionToActiveOrder(lastKnownFloor);
-
-        // Stop elevator if atempting to move outside valid range
-        if ((lastKnownFloor == 0 && dir == DIRN_DOWN) ||
-            (lastKnownFloor == N_FLOORS - 1 && dir == DIRN_UP))
-        {
-            elevio_motorDirection(DIRN_STOP);
-            changeState(DOOR_CLOSED);
-            orderQueue.activeOrder = -1;
-            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
-            continue;
-        }
-
+        MotorDirection dir = queue_getDirectionToCurrentOrder(lastKnownFloor);
         if (changeState(MOVING))
         {
             elevio_motorDirection(dir);

@@ -1,12 +1,5 @@
-#include <elevio.h>
-struct Door
-{
-    bool isOpen;
-    bool obstruction;
-    bool stop;
-};
+#pragma once
 
-void openDoor(bool open)
-{
-    elevio_doorOpenLamp((int)open);
-}
+#include <stdbool.h>
+
+bool door_open(void);

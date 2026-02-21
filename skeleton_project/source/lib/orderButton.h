@@ -13,4 +13,4 @@ struct OrderButton
 extern struct OrderButton buttons[10];
 
 void orderButtons_poll(void);
-void setLight(int floorId, ButtonType button, bool enable);
+void orderButtons_setLight(int floorId, ButtonType button, bool enable);

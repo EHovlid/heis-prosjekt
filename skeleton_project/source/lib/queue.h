@@ -5,14 +5,15 @@
 
 struct Queue
 {
-    int activeOrder;
+    int currentOrder;
     struct OrderButton *buttons;
     int numButtons;
 };
 
 extern struct Queue orderQueue;
 
-void queue_updateActiveOrder(void);
+void queue_updateCurrentOrder(void);
 void queue_completeOrder(int floorId);
-bool queue_hasActiveOrder(void);
-MotorDirection queue_getDirectionToActiveOrder(int currentFloor);
+void queue_clearAllOrders(void);
+bool queue_hasCurrentOrder(void);
+MotorDirection queue_getDirectionToCurrentOrder(int currentFloor);

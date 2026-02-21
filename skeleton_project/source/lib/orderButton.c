@@ -13,7 +13,7 @@ struct OrderButton buttons[10] = {
     {3, false, BUTTON_CAB},
 };
 
-void setLight(int floorId, ButtonType button, bool enable)
+void orderButtons_setLight(int floorId, ButtonType button, bool enable)
 {
     elevio_buttonLamp(floorId, button, (int)enable);
 }
@@ -28,6 +28,6 @@ void orderButtons_poll(void)
             buttons[i].isActive = true;
         }
 
-        setLight(buttons[i].floorId, buttons[i].type, buttons[i].isActive);
+        orderButtons_setLight(buttons[i].floorId, buttons[i].type, buttons[i].isActive);
     }
 }
