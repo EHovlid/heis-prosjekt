@@ -13,18 +13,19 @@ int main(void)
     elevio_init();
 
     printf("=== Elevator Controller ===\n");
-
     
     int sensorFloor = floor_getSensor();
     if (sensorFloor != 0)
     {
-        
         printf("=== Moving to first floor ===\n");
+
         while (floor_getSensor() != 0)
         {
             elevio_motorDirection(DIRN_DOWN);
         }
-        elevio_motorDirection(DIRN_STOP);     
+
+        elevio_motorDirection(DIRN_STOP);  
+
         printf("=== Ready for orders ===\n");
     }
 
@@ -34,20 +35,18 @@ int main(void)
 
     while (1)
     {
-        
-        printf("state=%d\n", state_p->state);
-
+        int stopPressed = elevio_stopButton();
         elevio_stopLamp(state_p->state == STOP ? 1 : 0);
 
         int sensorFloor = floor_getSensor();
-        if (sensorFloor >= 0)
+
+        if (sensorFloor >= 0) // Between floors is -1
         {
             lastKnownFloor = sensorFloor;
             floor_setIndicator(sensorFloor);
         }
 
         // FAT S4/S5/S6/D3: immediate stop, clear orders, ignore new orders, open door at floor.
-        int stopPressed = elevio_stopButton();
         if (stopPressed)
         {
             changeState(STOP); // Stop status alwaus succeeds
@@ -65,7 +64,7 @@ int main(void)
         if (state_p->state == STOP)
         {
             // Clear stop
-            if (!elevio_stopButton())
+            if (!stopPressed)
             {
                 changeState(DOOR_CLOSED);
                 elevio_stopLamp(0);
@@ -95,6 +94,19 @@ int main(void)
             continue;
         }
 
+        MotorDirection dir = queue_getDirectionToCurrentOrder(lastKnownFloor);
+
+        if (sensorFloor >= 0 &&
+            dir != DIRN_STOP &&
+            queue_hasOrderAtFloorInDirection(sensorFloor, dir))
+        {
+            elevio_motorDirection(DIRN_STOP);
+            queue_completeOrder(sensorFloor);
+            door_open();
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
+            continue;
+        }
+
         int targetFloor = orderQueue.currentOrder;
         if (sensorFloor == targetFloor)
         {
@@ -105,7 +117,6 @@ int main(void)
             continue;
         }
 
-        MotorDirection dir = queue_getDirectionToCurrentOrder(lastKnownFloor);
         if (changeState(MOVING))
         {
             elevio_motorDirection(dir);

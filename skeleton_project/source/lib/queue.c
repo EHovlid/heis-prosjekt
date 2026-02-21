@@ -7,6 +7,38 @@ bool queue_hasCurrentOrder(void)
     return orderQueue.currentOrder >= 0;
 }
 
+bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
+{
+    for (int i = 0; i < orderQueue.numButtons; i++)
+    {
+        struct OrderButton button = orderQueue.buttons[i];
+        if (!button.isActive || button.floorId != floorId)
+        {
+            continue;
+        }
+
+        if (button.type == BUTTON_CAB)
+        {
+            return true;
+        }
+
+        if (dir == DIRN_UP && button.type == BUTTON_HALL_UP)
+        {
+            return true;
+        }
+        if (dir == DIRN_DOWN && button.type == BUTTON_HALL_DOWN)
+        {
+            return true;
+        }
+        if (dir == DIRN_STOP)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 MotorDirection queue_getDirectionToCurrentOrder(int currentFloor)
 {
     if (!queue_hasCurrentOrder())

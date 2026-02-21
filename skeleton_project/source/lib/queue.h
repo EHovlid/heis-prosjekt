@@ -17,3 +17,4 @@ void queue_completeOrder(int floorId);
 void queue_clearAllOrders(void);
 bool queue_hasCurrentOrder(void);
 MotorDirection queue_getDirectionToCurrentOrder(int currentFloor);
+bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir);
