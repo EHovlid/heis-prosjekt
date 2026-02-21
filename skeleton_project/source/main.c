@@ -60,19 +60,8 @@ int main(void)
         {
             elevio_motorDirection(DIRN_STOP);
             queue_clearAllOrders();
-
-            if (sensorFloor >= 0)
-            {
-                if (state_p->state == MOVING)
-                {
-                    changeState(DOOR_CLOSED);
-                }
-                door_open();
-            }
-            else
-            {
-                changeState(STOP);
-            }
+            changeState(STOP);
+            door_open();
             continue;
         }
 

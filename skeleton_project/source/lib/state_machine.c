@@ -6,6 +6,10 @@ struct StateMachine *state_p = &sateMachine;
 bool changeState(elev_state new_state)
 {
     elev_state prev_state = state_p->state;
+    if (prev_state == new_state)
+    {
+        return true;
+    }
 
     switch (new_state)
     {
@@ -14,7 +18,7 @@ bool changeState(elev_state new_state)
         {
             return false;
         }
-        if (prev_state == DOOR_OPEN)
+        if (prev_state != DOOR_CLOSED)
         {
             return false;
         }
@@ -26,7 +30,7 @@ bool changeState(elev_state new_state)
         return true;
 
     case DOOR_OPEN:
-        if (prev_state != DOOR_CLOSED)
+        if (prev_state != DOOR_CLOSED && prev_state != STOP)
         {
             return false;
         }
