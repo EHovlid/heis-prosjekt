@@ -1,22 +1,18 @@
+#pragma once
+
+#include <stdbool.h>
 #include "orderButton.h"
 
 struct Queue
 {
     int activeOrder;
     struct OrderButton *buttons;
+    int numButtons;
 };
 
-struct Queue orderQueue = {-1, buttons};
+extern struct Queue orderQueue;
 
-void completeOrder(int floorId)
-{
-    size_t num_buttons = sizeof(orderQueue.buttons) / sizeof(orderQueue.buttons[0]);
-
-    for (int i = 0; i < num_buttons; i++)
-    {
-        if (orderQueue.buttons[i].floorId == floorId)
-        {
-            orderQueue.buttons[i].isActive = false;
-        }
-    }
-}
+void queue_updateActiveOrder(void);
+void queue_completeOrder(int floorId);
+bool queue_hasActiveOrder(void);
+MotorDirection queue_getDirectionToActiveOrder(int currentFloor);

@@ -1,8 +1,6 @@
-#include "driver/elevio.h"
+#pragma once
 
-int floorId = elevio_floorSensor();
+#include "../driver/elevio.h"
 
-void setLight(int floorId)
-{
-    elevio_floorIndicator(floorId);
-}
+int floor_getSensor(void);
+void floor_setIndicator(int floor);
