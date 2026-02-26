@@ -67,7 +67,7 @@ int floor_getSensor(void)
 
 void floor_setIndicator(int floor)
 {
-    // FAT L4 Should light for last known floor
+    // FAT L2 Should light for last known floor
     if (floor >= 0)
     {
         elevio_floorIndicator(floor);

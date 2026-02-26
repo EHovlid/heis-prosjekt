@@ -23,6 +23,7 @@ bool door_open(void)
         return false;
     }
 
+    // FAT D1 Light door lamp
     elevio_doorOpenLamp(1);
     doorTimerActive = true;
     closeAtMs = now_ms() + 3000;
@@ -50,8 +51,10 @@ void door_update(void)
         return;
     }
 
+    // FAT D2 Open door for 3 seconds
     if (now_ms() >= closeAtMs)
     {
+        // FAT D4 Close door while waiting for orders
         if (changeState(DOOR_CLOSED))
         {
             elevio_doorOpenLamp(0);
