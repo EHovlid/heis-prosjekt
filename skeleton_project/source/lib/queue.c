@@ -12,6 +12,7 @@ bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
     orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
+        // No active orders
         struct OrderButton button = orderQueue.buttons[i];
         if (!button.isActive || button.floorId != floorId)
         {

@@ -13,25 +13,27 @@ int main(void)
     elevio_init();
 
     printf("=== Elevator Controller ===\n");
-    
+    floor_startPollingThread();
+    nanosleep(&(struct timespec){0, 100 * 1000 * 1000}, NULL); // Allow thread to start
+
     int sensorFloor = floor_getSensor();
     if (sensorFloor != 0)
     {
         printf("=== Moving to first floor ===\n");
 
-        while (floor_getSensor() != 0)
+        while (sensorFloor != 0)
         {
             elevio_motorDirection(DIRN_DOWN);
+            sensorFloor = floor_getSensor();
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
         }
 
-        elevio_motorDirection(DIRN_STOP);  
-
-        printf("=== Ready for orders ===\n");
+        elevio_motorDirection(DIRN_STOP);
     }
+    printf("=== Ready for orders ===\n");
 
     int lastKnownFloor = 0;
     changeState(DOOR_CLOSED);
-    floor_startPollingThread();
     orderButtons_startPollingThread();
 
     while (1)
@@ -46,12 +48,9 @@ int main(void)
         if (sensorFloor >= 0) // Between floors is -1
         {
             lastKnownFloor = sensorFloor;
-            floor_setIndicator(sensorFloor);
         }
-        else
-        {
-            lastKnownFloor = floor_getLastKnown();
-        }
+
+        floor_setIndicator(lastKnownFloor);
 
         door_update();
 
@@ -73,6 +72,7 @@ int main(void)
             continue;
         }
 
+        // Never run motor with door open regardelss of other states
         if (state_p->state == DOOR_OPEN)
         {
             elevio_motorDirection(DIRN_STOP);
@@ -100,20 +100,23 @@ int main(void)
             continue;
         }
 
+        // Check if should stop on floor
         if (sensorFloor >= 0 &&
             queue_hasOrderAtFloorInDirection(sensorFloor, dir))
         {
+            changeState(DOOR_CLOSED);
             elevio_motorDirection(DIRN_STOP);
             queue_completeOrder(sensorFloor);
-            changeState(DOOR_CLOSED);
             door_open();
             continue;
         }
 
         if (dir == DIRN_STOP)
         {
-            elevio_motorDirection(DIRN_STOP);
-            changeState(DOOR_CLOSED);
+            if (changeState(DOOR_CLOSED))
+            {
+                elevio_motorDirection(DIRN_STOP);
+            }
             continue;
         }
 
@@ -123,8 +126,8 @@ int main(void)
         }
         else
         {
-            elevio_motorDirection(DIRN_STOP);
             changeState(DOOR_CLOSED);
+            elevio_motorDirection(DIRN_STOP);
         }
     }
 }
