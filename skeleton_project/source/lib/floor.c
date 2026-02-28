@@ -65,21 +65,9 @@ int floor_getSensor(void)
     return sensor;
 }
 
-int floor_getLastKnown(void)
-{
-    if (!floorThreadStarted)
-    {
-        floor_cacheUpdate(elevio_floorSensor());
-    }
-
-    pthread_mutex_lock(&floorMtx);
-    int floor = cachedLastKnownFloor;
-    pthread_mutex_unlock(&floorMtx);
-    return floor;
-}
-
 void floor_setIndicator(int floor)
 {
+    // FAT L2 Should light for last known floor
     if (floor >= 0)
     {
         elevio_floorIndicator(floor);

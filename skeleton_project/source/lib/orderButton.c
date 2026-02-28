@@ -49,6 +49,7 @@ void orderButtons_poll(void)
 {
     int stopPressed = elevio_stopButton();
 
+    // FAT H4 Poll all buttons for presses
     for (int i = 0; i < 10; i++)
     {
         bool pressed = elevio_callButton(buttons[i].floorId, buttons[i].type);
@@ -62,6 +63,7 @@ void orderButtons_poll(void)
         isActive = buttons[i].isActive;
         orderButtons_unlock();
 
+        // FAT L3/L4 Light active buttons
         if (lampState[i] != isActive)
         {
             orderButtons_setLight(buttons[i].floorId, buttons[i].type, isActive);

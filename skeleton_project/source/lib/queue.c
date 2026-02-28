@@ -12,6 +12,7 @@ bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
     orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {
+        // No active orders
         struct OrderButton button = orderQueue.buttons[i];
         if (!button.isActive || button.floorId != floorId)
         {
@@ -24,6 +25,7 @@ bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
             return true;
         }
 
+        // FAT H3 Ingore orders in wrong direction
         if (dir == DIRN_UP && button.type == BUTTON_HALL_UP)
         {
             orderButtons_unlock();
@@ -71,7 +73,7 @@ void queue_updateCurrentOrder(void)
         return;
     }
 
-    // Set first active orderButton to current order
+    // FAT H5 Set first active orderButton to current order
     orderButtons_lock();
     for (int i = 0; i < orderQueue.numButtons; i++)
     {

@@ -13,25 +13,29 @@ int main(void)
     elevio_init();
 
     printf("=== Elevator Controller ===\n");
-    
+    floor_startPollingThread();
+    nanosleep(&(struct timespec){0, 100 * 1000 * 1000}, NULL); // Allow thread to start
+
+    // FAT O1 go to defined state at start
     int sensorFloor = floor_getSensor();
     if (sensorFloor != 0)
     {
         printf("=== Moving to first floor ===\n");
 
-        while (floor_getSensor() != 0)
+        while (sensorFloor != 0)
         {
             elevio_motorDirection(DIRN_DOWN);
+            sensorFloor = floor_getSensor();
+            nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
         }
 
-        elevio_motorDirection(DIRN_STOP);  
-
-        printf("=== Ready for orders ===\n");
+        elevio_motorDirection(DIRN_STOP);
     }
 
+    // FAT O2/O3 ignore orders while moving to defined state
     int lastKnownFloor = 0;
     changeState(DOOR_CLOSED);
-    floor_startPollingThread();
+    printf("=== Ready for orders ===\n");
     orderButtons_startPollingThread();
 
     while (1)
@@ -39,33 +43,33 @@ int main(void)
         nanosleep(&(struct timespec){0, 20 * 1000 * 1000}, NULL);
 
         int stopPressed = elevio_stopButton();
-        elevio_stopLamp(stopPressed);
+        elevio_stopLamp(stopPressed); // FAT S3
 
+        // FAT S6 Get floor
         int sensorFloor = floor_getSensor();
 
         if (sensorFloor >= 0) // Between floors is -1
         {
             lastKnownFloor = sensorFloor;
-            floor_setIndicator(sensorFloor);
         }
-        else
-        {
-            lastKnownFloor = floor_getLastKnown();
-        }
+
+        // FAT L1 Light floor indicator
+        floor_setIndicator(lastKnownFloor);
 
         door_update();
 
-        // FAT S4/S5/S6/D3: immediate stop, clear orders, ignore new orders, open door at floor.
+        // FAT S1 Stop elevator if stop button pressed
         if (stopPressed)
         {
             elevio_motorDirection(DIRN_STOP);
-            queue_clearAllOrders();
+            queue_clearAllOrders(); // FAT S2
             changeState(STOP);
-            door_open();
+            door_open(); // FAT S7
+            // FAT S4 Continue without moving if stop i pressed
             continue;
         }
 
-        // Reset to idle (DOOR_CLOSED) when stopPressed is false
+        // FAT S5 Reset to idle (DOOR_CLOSED) when stopPressed is false
         if (state_p->state == STOP)
         {
             elevio_motorDirection(DIRN_STOP);
@@ -73,6 +77,7 @@ int main(void)
             continue;
         }
 
+        // Never run motor with door open regardelss of other states
         if (state_p->state == DOOR_OPEN)
         {
             elevio_motorDirection(DIRN_STOP);
@@ -100,20 +105,25 @@ int main(void)
             continue;
         }
 
+        // FAT H1/H2 Check if should stop on floor
         if (sensorFloor >= 0 &&
             queue_hasOrderAtFloorInDirection(sensorFloor, dir))
         {
+            changeState(DOOR_CLOSED);
             elevio_motorDirection(DIRN_STOP);
             queue_completeOrder(sensorFloor);
-            changeState(DOOR_CLOSED);
             door_open();
             continue;
         }
 
         if (dir == DIRN_STOP)
         {
+            // Should always stop regardless of state
+            if (!changeState(DOOR_CLOSED))
+            {
+                changeState(STOP);
+            }
             elevio_motorDirection(DIRN_STOP);
-            changeState(DOOR_CLOSED);
             continue;
         }
 
@@ -123,8 +133,13 @@ int main(void)
         }
         else
         {
+            // Should always stop regardless of state
+            if (!changeState(DOOR_CLOSED))
+            {
+                // Stop as fallback if door close fails
+                changeState(STOP);
+            }
             elevio_motorDirection(DIRN_STOP);
-            changeState(DOOR_CLOSED);
         }
     }
 }

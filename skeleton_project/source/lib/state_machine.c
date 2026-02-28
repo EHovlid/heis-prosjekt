@@ -18,6 +18,8 @@ bool changeState(elev_state new_state)
         {
             return false;
         }
+
+        // FAT D3/D4 Do not move with door open
         if (prev_state != DOOR_CLOSED)
         {
             return false;
