@@ -1,22 +1,21 @@
 #include "orderButton.h"
 #include <time.h>
 
-struct OrderButton buttons[10] = {
-    {0, false, BUTTON_HALL_UP},
-    {0, false, BUTTON_CAB},
-    {1, false, BUTTON_HALL_UP},
-    {1, false, BUTTON_HALL_DOWN},
-    {1, false, BUTTON_CAB},
-    {2, false, BUTTON_HALL_UP},
-    {2, false, BUTTON_HALL_DOWN},
-    {2, false, BUTTON_CAB},
-    {3, false, BUTTON_HALL_DOWN},
-    {3, false, BUTTON_CAB},
+struct OrderButton buttons[ORDER_BUTTON_COUNT] = {
+    {0, false, false, BUTTON_HALL_UP},
+    {0, false, false, BUTTON_CAB},
+    {1, false, false, BUTTON_HALL_UP},
+    {1, false, false, BUTTON_HALL_DOWN},
+    {1, false, false, BUTTON_CAB},
+    {2, false, false, BUTTON_HALL_UP},
+    {2, false, false, BUTTON_HALL_DOWN},
+    {2, false, false, BUTTON_CAB},
+    {3, false, false, BUTTON_HALL_DOWN},
+    {3, false, false, BUTTON_CAB},
 };
 
 static pthread_mutex_t orderButtonsMtx = PTHREAD_MUTEX_INITIALIZER;
 static bool pollingThreadStarted = false;
-static bool lampState[10] = {false};
 
 void orderButtons_lock(void)
 {
@@ -30,14 +29,15 @@ void orderButtons_unlock(void)
 
 void orderButtons_setLight(int floorId, ButtonType button, bool enable)
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         if (buttons[i].floorId == floorId && buttons[i].type == button)
         {
-            if (lampState[i] != enable)
+            // Do not change lamp state unless necessary
+            if (buttons[i].isLightOn != enable)
             {
                 elevio_buttonLamp(floorId, button, (int)enable);
-                lampState[i] = enable;
+                buttons[i].isLightOn = enable;
             }
             return;
         }
@@ -50,7 +50,7 @@ void orderButtons_poll(void)
     int stopPressed = elevio_stopButton();
 
     // FAT H4 Poll all buttons for presses
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         bool pressed = elevio_callButton(buttons[i].floorId, buttons[i].type);
         bool isActive;
@@ -64,10 +64,7 @@ void orderButtons_poll(void)
         orderButtons_unlock();
 
         // FAT L3/L4 Light active buttons
-        if (lampState[i] != isActive)
-        {
-            orderButtons_setLight(buttons[i].floorId, buttons[i].type, isActive);
-        }
+        orderButtons_setLight(buttons[i].floorId, buttons[i].type, isActive);
     }
 }
 

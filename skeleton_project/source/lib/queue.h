@@ -7,7 +7,6 @@ struct Queue
 {
     int currentOrder;
     struct OrderButton *buttons;
-    int numButtons;
 };
 
 extern struct Queue orderQueue;

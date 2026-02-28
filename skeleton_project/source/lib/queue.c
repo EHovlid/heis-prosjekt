@@ -1,6 +1,6 @@
 #include "queue.h"
 
-struct Queue orderQueue = {-1, buttons, 10};
+struct Queue orderQueue = {-1, buttons};
 
 bool queue_hasCurrentOrder(void)
 {
@@ -10,7 +10,7 @@ bool queue_hasCurrentOrder(void)
 bool queue_hasOrderAtFloorInDirection(int floorId, MotorDirection dir)
 {
     orderButtons_lock();
-    for (int i = 0; i < orderQueue.numButtons; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         // No active orders
         struct OrderButton button = orderQueue.buttons[i];
@@ -75,7 +75,7 @@ void queue_updateCurrentOrder(void)
 
     // FAT H5 Set first active orderButton to current order
     orderButtons_lock();
-    for (int i = 0; i < orderQueue.numButtons; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         if (orderQueue.buttons[i].isActive)
         {
@@ -89,27 +89,17 @@ void queue_updateCurrentOrder(void)
 
 void queue_completeOrder(int floorId)
 {
-    bool clearMask[10] = {false};
-
     orderButtons_lock();
-    for (int i = 0; i < orderQueue.numButtons; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         // All buttons on stopped floor should be cleared
         if (orderQueue.buttons[i].floorId == floorId)
         {
             orderQueue.buttons[i].isActive = false;
-            clearMask[i] = true;
-        }
-    }
-    orderButtons_unlock();
-
-    for (int i = 0; i < orderQueue.numButtons; i++)
-    {
-        if (clearMask[i])
-        {
             orderButtons_setLight(orderQueue.buttons[i].floorId, orderQueue.buttons[i].type, false);
         }
     }
+    orderButtons_unlock();
 
     if (orderQueue.currentOrder == floorId)
     {
@@ -120,13 +110,13 @@ void queue_completeOrder(int floorId)
 void queue_clearAllOrders(void)
 {
     orderButtons_lock();
-    for (int i = 0; i < orderQueue.numButtons; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         orderQueue.buttons[i].isActive = false;
     }
     orderButtons_unlock();
 
-    for (int i = 0; i < orderQueue.numButtons; i++)
+    for (int i = 0; i < ORDER_BUTTON_COUNT; i++)
     {
         orderButtons_setLight(orderQueue.buttons[i].floorId, orderQueue.buttons[i].type, false);
     }
