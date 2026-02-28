@@ -1,0 +1,86 @@
+@startuml
+title Elevator Controll - Class Diagram
+
+skinparam classAttributeIconSize 0
+hide empty methods
+hide empty fields
+
+enum ElevState {
+  MOVING
+  STOP
+  DOOR_OPEN
+  DOOR_CLOSED
+}
+
+enum ButtonKind {
+  HALL_UP
+  HALL_DOWN
+  CAB
+}
+
+class OrderButton {
+  floorId: int
+  isActive: bool
+  isLightOn: bool
+  type: ButtonKind
+}
+
+class Queue {
+  currentOrder: int
+  buttons: OrderButton*
+}
+
+class StateMachine {
+  +state: ElevState
+}
+
+class OrderButtonModule {
+  ORDER_BUTTON_COUNT: int = 10
+  buttons: OrderButton[ORDER_BUTTON_COUNT]
+  orderButtons_poll()
+  orderButtons_setLight(floorId: int, button: ButtonKind, enable: bool)
+  orderButtons_startPollingThread()
+  orderButtons_lock()
+  orderButtons_unlock()
+}
+
+class QueueModule {
+  orderQueue: Queue
+  queue_updateCurrentOrder()
+  queue_completeOrder(floorId: int)
+  queue_clearAllOrders()
+  queue_hasCurrentOrder(): bool
+  queue_getDirectionToCurrentOrder(currentFloor: int): int
+  queue_hasOrderAtFloorInDirection(floorId: int, dir: int): bool
+}
+
+class DoorModule {
+  +door_open(): bool
+  +door_update()
+}
+
+class FloorModule {
+  floor_startPollingThread()
+  floor_getSensor(): int
+  floor_setIndicator(floor: int)
+}
+
+class ElevatorModule {
+  main()
+}
+
+Queue "1" o-- "*" OrderButton : tracks
+StateMachine --> ElevState
+OrderButton --> ButtonKind
+
+OrderButtonModule ..> OrderButton
+QueueModule ..> Queue
+QueueModule ..> OrderButtonModule : reads/clears orders
+DoorModule ..> StateMachine : changes state
+ElevatorModule ..> FloorModule : polls floor and sets indicator
+ElevatorModule ..> DoorModule : updates/opens door
+ElevatorModule ..> QueueModule : dispatches and completes orders
+ElevatorModule ..> OrderButtonModule : polls buttons and sets indicator
+ElevatorModule ..> StateMachine : drives transitions
+
+@enduml
