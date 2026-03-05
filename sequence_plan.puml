@@ -1,0 +1,66 @@
+@startuml
+title Elevator Control - Sequence Diagram
+
+participant "Elevator" as Main
+participant "Queue" as Queue
+participant "Order buttons" as Button
+participant "StateMachine" as State
+participant "Door" as Door
+participant "Floor" as Floor
+participant "Motor Controller" as motor
+
+autonumber
+
+== Initialization ==
+Main -> Floor: floor = floorNumber()
+Main -> motor: moveTo(0)
+Main -> Main: changeState(DOOR_CLOSED)
+
+== Main Control Loop (continuous) ==
+Main -> Floor: floor = floorNumber()
+Main -> Floor: setLight(floor)
+Button -> Queue: pressed()
+Button -> Button : setLight()
+Main -> Queue: currentQueueItem= items[0]
+
+alt Stop button pressed
+  Main -> State: changeState(STOP)
+  Main -> Queue: items[] = []
+  Main -> Floor: sensorActive
+  alt sensorActive == True
+    Main -> Door: door_open()
+end
+end
+
+  alt currentQueueItem != NULL    
+    Main -> motor: moveTo(currentQueueItem.floor)
+    Main -> Main: changeState(MOVING)
+    Main -> motor: currentDirection = direction
+    alt floor = item[].floor and currentDirection = item[].floor.direction
+          Main-> Main: changeState(DOOR_OPEN)
+          Queue-> Button: completeOrder()
+  Main-> Door: openDoor()
+  Main-> Main: sleep(3)
+  Door -> Main: obstruction == false
+  Main-> Door: closeDoor()
+  Main-> Main: changeState(DOOR_CLOSED)
+  Main-> Main: changeState(MOVING)
+    end
+alt floor = currentQueueItem.floor
+  Main-> Main: changeState(DOOR_OPEN)
+  Queue-> Button: completeOrder()
+  Main-> Door: openDoor()
+  Main-> Main: sleep(3)
+  Door -> Main: obstruction == false
+  Main-> Door: closeDoor()
+  Main-> Main: changeState(DOOR_CLOSED)
+end
+  else No current order
+    Main -> State: changeState(DOOR_CLOSED)
+  end
+ 
+
+
+== Repeat ==
+
+@enduml
