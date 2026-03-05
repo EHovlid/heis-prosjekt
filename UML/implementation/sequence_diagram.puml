@@ -1,7 +1,7 @@
 @startuml
-title Elevator Control - Sequence Diagram
+title Sequence Diagram
 
-participant "Main\nControl Loop" as Main
+participant "Main" as Main
 participant "OrderButton\nPoller" as Button
 participant "Queue" as Queue
 participant "StateMachine" as State

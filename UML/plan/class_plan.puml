@@ -1,4 +1,5 @@
 @startuml
+title Class Diagram
 
 class Elevator {
     floor: int

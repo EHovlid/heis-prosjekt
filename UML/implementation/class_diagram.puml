@@ -1,5 +1,5 @@
 @startuml
-title Elevator Controll - Class Diagram
+title Class Diagram
 
 skinparam classAttributeIconSize 0
 hide empty methods
@@ -31,7 +31,7 @@ class Queue {
 }
 
 class StateMachine {
-  +state: ElevState
+  state: ElevState
 }
 
 class OrderButtonModule {
@@ -55,8 +55,8 @@ class QueueModule {
 }
 
 class DoorModule {
-  +door_open(): bool
-  +door_update()
+  door_open(): bool
+  door_update()
 }
 
 class FloorModule {
