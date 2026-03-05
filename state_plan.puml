@@ -1,0 +1,13 @@
+@startuml
+title State Diagram
+hide empty description
+
+
+[*] --> Door_closed : power on / initialize
+Door_closed --> Moving : order button pressed/startMotor
+Moving --> Door_closed : target floor = current floor/stopMotor
+Door_closed --> Door_open : open door/openDoor
+Door_open--> Door_closed : timePassed[Obstruction = False] / closeDoor
+Moving --> Stop : stop pressed/stopMotor
+Stop --> Door_closed : Stop released
+@enduml
