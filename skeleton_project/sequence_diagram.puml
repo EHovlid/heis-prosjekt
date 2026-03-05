@@ -1,0 +1,78 @@
+@startuml
+title Elevator Control - Sequence Diagram
+
+participant "Main\nControl Loop" as Main
+participant "OrderButton\nPoller" as Button
+participant "Queue" as Queue
+participant "StateMachine" as State
+participant "Door" as Door
+participant "Floor\nPoller" as Floor
+
+autonumber
+
+== Initialization ==
+Main -> Floor: floor_startPollingThread()
+Main -> Button: orderButtons_startPollingThread()
+Main -> State: changeState(DOOR_CLOSED)
+Main -> Button: orderButtons_poll()
+
+== Order Placed & Processing ==
+Button -> Queue: orderQueue.buttons[i].isActive = true
+
+== Main Control Loop (continuous) ==
+Main -> Button: orderButtons_poll()
+Main -> Floor: floor_getSensor()
+Main -> Main: lastKnownFloor = sensorFloor
+Main -> Floor: floor_setIndicator(floor)
+Main -> Door: door_update()
+alt Door timer expired
+  Door -> State: changeState(DOOR_CLOSED)
+  Door -> Door: elevio_doorOpenLamp(0)
+end
+
+alt Stop button pressed
+  Main -> State: changeState(STOP)
+  Main -> Queue: queue_clearAllOrders()
+  Queue -> Button: orderButtons_setLight(floor, type, false)
+  Main -> Door: door_open()
+else No stop button
+  Main -> Queue: queue_updateCurrentOrder()
+  
+  alt Has current order
+    Main -> Queue: queue_getDirectionToCurrentOrder(currentFloor)
+    Queue --> Main: direction (UP/DOWN/STOP)
+    
+    alt At target floor with matching direction
+      Main -> State: changeState(DOOR_CLOSED)
+      Main -> Main: elevio_motorDirection(STOP)
+      Main -> Queue: queue_completeOrder(sensorFloor)
+      Queue -> Button: orderButtons_setLight(floor, type, false)
+      Main -> Door: door_open()
+      Door -> State: changeState(DOOR_OPEN)
+      Door -> Door: elevio_doorOpenLamp(1)
+      Door -> Door: doorTimerActive = true\ncloseAtMs = now_ms() + 3000
+    else Not at target / need to move
+      alt Can change to MOVING
+        Main -> State: changeState(MOVING)
+        State --> Main: true
+        Main -> Main: elevio_motorDirection(direction)
+      else Cannot move (door open)
+        Main -> State: changeState(DOOR_CLOSED)
+        alt Success
+          Main -> State: changeState(MOVING)
+          Main -> Main: elevio_motorDirection(direction)
+        else Failed, fallback to STOP
+          Main -> State: changeState(STOP)
+          Main -> Main: elevio_motorDirection(STOP)
+        end
+      end
+    end
+  else No current order
+    Main -> Main: elevio_motorDirection(STOP)
+    Main -> State: changeState(DOOR_CLOSED)
+  end
+end
+
+== Repeat ==
+
+@enduml
