@@ -1,0 +1,49 @@
+@startuml
+
+class Elevator {
+    floor: int
+    state: State
+    currentQueueItem: QueueItem
+    changeState(State): Bool
+}
+
+class MotorController {
+    direction: int
+    moveTo(int): void
+}
+
+class Door {
+    isOpen: Bool
+    obstruction: Bool
+    stop: Bool
+    openDoor(): void
+    closeDoor(): void
+}
+
+class Floor {
+    floorNumber: int
+    sensorActive: Bool
+    setLight(Bool): void
+}
+
+class QueueItem {
+    items[]: orderButton
+    completeOrder(int): elevator
+}
+
+class OrderButton {
+    floor: int
+    isActive: Bool
+    direction: int
+    setLight(Bool): void
+    pressed(): QueueItem
+}
+
+' Relationships
+Elevator --> MotorController
+Elevator --> Floor
+Elevator --> Door
+QueueItem --> OrderButton
+Elevator "1" --> "*" QueueItem
+
+@enduml
